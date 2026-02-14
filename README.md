@@ -11,8 +11,7 @@ Simulação de um manipulador planar 3-DOF com modelação cinemática e control
 - Scope: apenas cinemática (sem dinâmica)
 
 ### 2️⃣ Modelação Geométrica
-- Definição dos comprimentos 
-- L1,L2,L3
+- Definição dos comprimentos L1,L2,L3
 - Forward Kinematics (equações trigonométricas)
 - Justificação por usar abordagem geométrica (simplicidade planar)
 
@@ -23,8 +22,7 @@ Simulação de um manipulador planar 3-DOF com modelação cinemática e control
 
 ### 4️⃣ Jacobiana
 - Derivação a partir da FK
-- Relação 
-- 𝑥˙=𝐽(𝑞)𝑞˙
+- Relação 𝑥˙=𝐽(𝑞)𝑞˙
 - Interpretação física
 
 ### 5️⃣ Singularidades
