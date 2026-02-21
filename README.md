@@ -1,5 +1,5 @@
 # 3DOF Robotic Arm Simulation
-Planar three-degree-of-freedom (3DOF) manipulator simulation with workspace analysis and proportional kinematic control.
+Planar three-degree-of-freedom(3DOF) manipulator simulation with workspace analysis and proportional kinematic control.
 
 ## Introduction
 This project implements a planar 3DOF robotic arm using a direct geometric formulation. The simulation demonstrates end-effector trajectory tracking and explores the manipulator’s behavior across its reachable workspace.
@@ -18,7 +18,7 @@ The report covers:
 - Proportional control (kinematic)
 
 ## Path tracking Simulation Demo
-[3DOF_2D_Path_Tracking.mov](media/3DOF_2D_Path_Tracking.mov)
+![3DOF_2D_Path_Tracking.png](media/3DOF_2D_Path_Tracking.png)
 
 The manipulator tracks a reference trajectory using proportional control.
 
