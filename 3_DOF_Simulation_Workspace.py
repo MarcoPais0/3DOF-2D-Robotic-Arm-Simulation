@@ -4,48 +4,51 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import numpy as np
 
-L1, L2, L3 = 10, 5, 3
-fig, ax = plt.subplots()
+
+class WorkspaceAnalyzer:
+    def __init__(self, l1: float = 10, l2: float = 5, l3: float = 3) -> None:
+        """
+        Initialize the workspace analyzer with robot link lengths and figure setup.
+        """
+        self.L1: float = l1
+        self.L2: float = l2
+        self.L3: float = l3
+
+        # Figure and axis setup
+        self.fig, self.ax = plt.subplots()
+        self.ax.set_aspect('equal')
+        self.ax.set_xlim(-20, 20)
+        self.ax.set_ylim(-20, 20)
+        self.ax.set_title("3DOF Arm Simulation Workspace")
+        self.ax.grid(False)
+
+    def workspace_analysis(self) -> None:
+        """
+        Draw workspace as concentric rings.
+        For each radius, rotate the end-effector 200 times.
+        """
+        r_max: float = self.L1 + self.L2 + self.L3
+        r_min: float = max(0.0, self.L1 - self.L2 - self.L3)
+        radius_steps: int = 100
+        angle_steps: int = 100
+
+        radii: np.ndarray = np.linspace(r_min, r_max, radius_steps)
+        for r in radii:
+            angles: np.ndarray = np.linspace(0, 2 * np.pi, angle_steps)
+            x: np.ndarray = r * np.cos(angles)
+            y: np.ndarray = r * np.sin(angles)
+
+            self.ax.plot(x, y, '.', color='red', markersize=1)
+            self.fig.canvas.draw_idle()
+            angle_steps += 1
+            plt.pause(0.05)
+
+        plt.show()
 
 
-def workspace_analysis():
-    """
-    Draw workspace as concentric rings.
-    For each radius (100 steps), rotate 200 times.
-    """
-    r_max = L1 + L2 + L3
-    r_min = max(0, L1 - L2 - L3)
-    radius_steps = 100
-    angle_steps = 100
-
-    radii = np.linspace(r_min, r_max, radius_steps)
-    for r in radii:
-        for theta in np.linspace(0, 2*np.pi, angle_steps):
-
-            x = r * np.cos(theta)
-            y = r * np.sin(theta)
-            ax.plot(x, y, '.', color='red', markersize=1)
-
-        fig.canvas.draw_idle()
-        plt.pause(0.1)
-        angle_steps += 1
-
-    plt.show()
-
-
-def setup():
-    """Set up the simulation environment."""
-    global ax
-    ax.set_aspect('equal')
-    ax.set_xlim(-20, 20)
-    ax.set_ylim(-20, 20)
-    ax.set_title("3DOF Arm Simulation Workspace")
-    ax.grid(True)
-
-
-def main():
-    setup()
-    workspace_analysis()
+def main() -> None:
+    analyzer = WorkspaceAnalyzer()
+    analyzer.workspace_analysis()
 
 
 if __name__ == "__main__":
