@@ -3,57 +3,12 @@ from typing import Sequence
 
 try:
     # When used as part of the package
-    from .arm4dof_dh import Arm4DOFDH, dh_transform
+    from .forward_kinematics import Arm4DOFDH
+    from .geometric_jacobian import geometric_jacobian
 except ImportError:
     # When run directly from the src directory
-    from arm4dof_dh import Arm4DOFDH, dh_transform
-
-
-def geometric_jacobian(arm: Arm4DOFDH, q: Sequence[float]) -> np.ndarray:
-    """
-    Compute the 6x4 geometric Jacobian for the 4DOF DH arm.
-
-    The Jacobian is constructed numerically from the DH chain using the
-    classic z-axis / cross-product method:
-        v_i   = z_i-1 x (p_e - p_i-1)
-        w_i   = z_i-1
-
-    Parameters
-    ----------
-    arm : Arm4DOFDH
-        Arm model providing DH parameters.
-    q : array_like, shape (4,)
-        Joint angles.
-
-    Returns
-    -------
-    J : (6, 4) ndarray
-        Geometric Jacobian mapping joint velocities to end-effector spatial
-        velocity [v; w].
-    """
-    if len(q) != arm.dof:
-        raise ValueError(f"Expected {arm.dof} joint angles, got {len(q)}.")
-
-    Ts = []
-    T = np.eye(4)
-    Ts.append(T.copy())
-    for qi, link in zip(q, arm.links):
-        theta = qi + link.theta_offset
-        T = T @ dh_transform(link.a, link.alpha, link.d, theta)
-        Ts.append(T.copy())
-
-    p_e = Ts[-1][:3, 3]
-    J = np.zeros((6, arm.dof), dtype=float)
-
-    for i in range(arm.dof):
-        z_i = Ts[i][:3, 2]
-        p_i = Ts[i][:3, 3]
-        v_i = np.cross(z_i, p_e - p_i)
-        w_i = z_i
-        J[0:3, i] = v_i
-        J[3:6, i] = w_i
-
-    return J
+    from forward_kinematics import Arm4DOFDH
+    from geometric_jacobian import geometric_jacobian
 
 
 def damped_pseudo_inverse(J: np.ndarray, lam: float = 1e-3) -> np.ndarray:
@@ -112,16 +67,16 @@ def inverse_differential_kinematics(
 
 def main() -> None:
     """
-    Small demo: print the Jacobian at a sample configuration.
+    Small demo: print a joint-velocity command for a sample spatial command.
     """
     arm = Arm4DOFDH()
     q = np.deg2rad([30.0, 20.0, -15.0, 40.0])
-    J = geometric_jacobian(arm, q)
+    xdot_desired = np.array([0.1, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=float)
+    qdot = inverse_differential_kinematics(arm, q, xdot_desired)
     np.set_printoptions(precision=3, suppress=True)
-    print("J(q):")
-    print(J)
+    print("qdot:")
+    print(qdot)
 
 
 if __name__ == "__main__":
     main()
-

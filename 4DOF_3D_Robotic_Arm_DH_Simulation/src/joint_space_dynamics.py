@@ -4,10 +4,10 @@ from typing import Sequence, Tuple
 
 try:
     # When used as part of the package
-    from .arm4dof_dh import Arm4DOFDH
+    from .forward_kinematics import Arm4DOFDH
 except ImportError:
     # When run directly from the src directory
-    from arm4dof_dh import Arm4DOFDH
+    from forward_kinematics import Arm4DOFDH
 
 
 @dataclass
@@ -30,9 +30,8 @@ class SimpleDynamics4DOF:
 
     Assumptions:
     - Diagonal inertia and damping matrices.
-    - Gravity torque approximated using link CoMs projected along the
-      planar arm (z direction is unused in the default DH choice but the
-      gravity term is included for extensibility).
+    - Gravity torque remains a simple placeholder based on projected link
+      lengths rather than a spatially faithful Topic 6 rigid-body model.
     """
 
     def __init__(
@@ -75,11 +74,11 @@ class SimpleDynamics4DOF:
 
     def gravity_torque(self, q: Sequence[float]) -> np.ndarray:
         """
-        Very simple gravity torque approximation.
+        Very simple placeholder gravity torque approximation.
 
-        For the planar arm, we approximate each link's center of mass
-        position along the chain and compute the torque with respect to
-        each joint assuming gravity acts in -y in the plane.
+        This heuristic remains intentionally simple during the geometry
+        upgrade. It is not yet a physically faithful spatial gravity model
+        for the Topic 2 arm geometry.
         """
         n = self.arm.dof
         if len(q) != n:
@@ -91,15 +90,14 @@ class SimpleDynamics4DOF:
         torques = np.zeros(n, dtype=float)
         lengths = np.array([link.a for link in self.arm.links], dtype=float)
 
-        # For each link, approximate CoM angle and position
+        # For each link, approximate a projected CoM contribution.
         for i in range(n):
             theta_com = np.sum(q[: i + 1])
             r_com = 0.5 * lengths[i]
-            # CoM position in planar coordinates (x, y)
+            # Keep the same lightweight projected potential model for now.
             y_com = r_com * np.sin(theta_com)
-            # Potential energy contribution U_i = m_i * g * y_com
-            # Torque about joint j is ∂U_i/∂q_j; with this simple planar
-            # model and small chain, we approximate it as:
+            # Potential energy contribution U_i = m_i * g * y_com.
+            # Torque about joint j is approximated from that scalar model.
             for j in range(i + 1):
                 torques[j] += self.masses[i] * g * r_com * np.cos(
                     np.sum(q[: i + 1])
@@ -162,4 +160,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -3,22 +3,30 @@ import numpy as np
 import pyvista as pv
 
 try:
-    # When run as part of the package: python -m 4DOF_3D_Robotic_Arm_DH_Simulation.src.simulation_4dof_3d
-    from .arm4dof_dh import Arm4DOFDH
-    from .control4dof import JointSpacePIDController, PIDGains, simulate_joint_step_response
-    from .dynamics4dof import SimpleDynamics4DOF
-    from .jacobian4dof import inverse_differential_kinematics
+    # When run as part of the package: python -m 4DOF_3D_Robotic_Arm_DH_Simulation.src.robot_arm_3d_demo
+    from .forward_kinematics import Arm4DOFDH
+    from .joint_space_controller import (
+        JointSpacePIDController,
+        PIDGains,
+        simulate_joint_step_response,
+    )
+    from .joint_space_dynamics import SimpleDynamics4DOF
+    from .inverse_differential_kinematics import inverse_differential_kinematics
 except ImportError:
     # When run directly from the src directory as a script
-    from arm4dof_dh import Arm4DOFDH
-    from control4dof import JointSpacePIDController, PIDGains, simulate_joint_step_response
-    from dynamics4dof import SimpleDynamics4DOF
-    from jacobian4dof import inverse_differential_kinematics
+    from forward_kinematics import Arm4DOFDH
+    from joint_space_controller import (
+        JointSpacePIDController,
+        PIDGains,
+        simulate_joint_step_response,
+    )
+    from joint_space_dynamics import SimpleDynamics4DOF
+    from inverse_differential_kinematics import inverse_differential_kinematics
 
 
 class Arm4DOF3DSimulation:
     """
-    3D visualization and demo scripts for the 4DOF DH arm using PyVista.
+    3D visualization and demo scripts for the spatial 4DOF DH arm.
     """
 
     def __init__(self) -> None:
@@ -38,13 +46,13 @@ class Arm4DOF3DSimulation:
         self.plotter = pv.Plotter()
         self.plotter.add_axes()
         self.plotter.set_background("white")
-        self.plotter.add_text("4DOF DH Arm - 3D Simulation", font_size=12)
+        self.plotter.add_text("Spatial 4DOF DH Arm - 3D Simulation", font_size=12)
 
         # Initial configuration
         self.q = np.zeros(4, dtype=float)
-        xs, ys, zs = self.arm.joint_positions(self.q)
-        points = np.column_stack((xs, ys, zs))
-        self.arm_mesh = pv.lines_from_points(points)
+        state = self.arm.frame_state(self.q)
+        arm_points = np.vstack((state.joint_points, state.tool_point))
+        self.arm_mesh = pv.lines_from_points(arm_points)
         self.arm_actor = self.plotter.add_mesh(
             self.arm_mesh,
             color="black",
@@ -52,7 +60,7 @@ class Arm4DOF3DSimulation:
         )
 
         # End-effector marker
-        self.ee_sphere = pv.Sphere(radius=0.2, center=points[-1])
+        self.ee_sphere = pv.Sphere(radius=0.2, center=state.tool_point)
         self.ee_actor = self.plotter.add_mesh(self.ee_sphere, color="blue")
 
         # Adjust camera roughly similar to previous view box
@@ -61,12 +69,11 @@ class Arm4DOF3DSimulation:
         self.plotter.set_viewup((0.0, 0.0, 1.0))
 
     def _update_arm_geometry(self, q: np.ndarray) -> None:
-        xs, ys, zs = self.arm.joint_positions(q)
-        points = np.column_stack((xs, ys, zs))
-        self.arm_mesh.points = points
+        state = self.arm.frame_state(q)
+        self.arm_mesh.points = np.vstack((state.joint_points, state.tool_point))
 
         # Update end-effector sphere position
-        self.ee_sphere.center = points[-1]
+        self.ee_sphere.center = state.tool_point
 
     def run_joint_step_demo(self) -> None:
         """
@@ -103,9 +110,9 @@ class Arm4DOF3DSimulation:
         """
         Differential-kinematics-based Cartesian tracking demo in 3D.
 
-        A simple circular path in the XY plane is tracked by using
-        differential IK on the end-effector position. The window remains
-        interactive until the user closes it.
+        A lifted circular path in a horizontal plane is tracked by using
+        differential IK on the tool position. The window remains interactive
+        until the user closes it.
         """
         # Start interactive window (allows rotate/zoom/close)
         self.plotter.show(auto_close=False, interactive_update=True)
@@ -114,11 +121,11 @@ class Arm4DOF3DSimulation:
         q_dot = np.zeros(4, dtype=float)
         dt = 0.02
 
-        center = np.array([5.0, 0.0, 0.0])
-        radius = 2.0
+        center = np.array([self.arm.l2 + self.arm.l3, 0.0, self.arm.l1])
+        radius = 0.5 * min(self.arm.l2, self.arm.l3)
         t_final = 8.0
 
-        # Precompute and show desired circular path
+        # Precompute and show the lifted reference path.
         steps = int(t_final / dt)
         ts = np.linspace(0.0, t_final, steps)
         path_points = []
@@ -142,8 +149,8 @@ class Arm4DOF3DSimulation:
             angle = 2.0 * np.pi * (t / t_final)
             xd = center + radius * np.array([np.cos(angle), np.sin(angle), 0.0])
 
-            T = self.arm.forward_kinematics(q)
-            x = T[:3, 3]
+            state = self.arm.frame_state(q)
+            x = state.tool_transform[:3, 3]
 
             v_des = (xd - x) / dt
             xdot_desired = np.zeros(6, dtype=float)
@@ -176,4 +183,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

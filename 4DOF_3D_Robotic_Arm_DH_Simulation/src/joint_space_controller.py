@@ -4,10 +4,10 @@ from typing import Sequence, Tuple
 
 try:
     # When used as part of the package
-    from .dynamics4dof import SimpleDynamics4DOF
+    from .joint_space_dynamics import SimpleDynamics4DOF
 except ImportError:
     # When run directly from the src directory
-    from dynamics4dof import SimpleDynamics4DOF
+    from joint_space_dynamics import SimpleDynamics4DOF
 
 
 @dataclass
@@ -124,7 +124,10 @@ def main() -> None:
     """
     Quick smoke test of the controller and dynamics on a simple step.
     """
-    from .arm4dof_dh import Arm4DOFDH
+    try:
+        from .forward_kinematics import Arm4DOFDH
+    except ImportError:
+        from forward_kinematics import Arm4DOFDH
 
     arm = Arm4DOFDH()
     dyn = SimpleDynamics4DOF(arm)
@@ -149,4 +152,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

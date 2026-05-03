@@ -9,9 +9,11 @@ structure, demo layer, and completion criteria.
 ## Architecture Principles
 
 - The project models a spatial 4DOF arm with standard DH geometry and an
-  explicit tool frame with nonzero translation.
+  explicit tool frame with nonzero translation along `z4`.
 - The task is `3D` tool-position control with one redundant DOF; tool
   orientation is modeled but not actively controlled.
+- The redundant DOF is end-effector roll about `z4` for the default tool
+  geometry, not an independent position actuator.
 - The system is structured around five core interfaces: `FK`, `Jacobian`,
   `IK`, `Dynamics`, and `Controller`.
 - These interfaces define the stable mathematical and control boundaries of the
@@ -113,6 +115,8 @@ the frame assignment used throughout the project.
 
 - All joints are revolute.
 - The tool frame is modeled explicitly after joint 4.
+- The tool frame origin is offset along `z4` so joint 4 acts as an
+  end-effector roll joint without moving the tool point.
 
 ## Topic 2: Standard DH Convention
 
@@ -143,7 +147,7 @@ theta_i = q_i + theta_offset_i
 ### Tool Transform
 
 ```text
-T_4^tool = Trans_x(L_tool), with L_tool > 0
+T_4^tool = Trans_z(L_tool), with L_tool > 0
 ```
 
 ### Design Decisions
@@ -151,7 +155,14 @@ T_4^tool = Trans_x(L_tool), with L_tool > 0
 - `theta_offset_i` remains available for deliberate home-frame alignment.
 - The nonzero `alpha_3` term prevents joint 3 and joint 4 axes from being
   collinear.
-- The tool offset is modeled through `T_4^tool`.
+- The tool offset is modeled through `T_4^tool` along `z4`.
+- Any custom `T_4^tool` override must preserve positive `z4` translation and
+  tool-axis alignment with `z4`.
+- Aligning the tool with `z4` partially decouples positioning from
+  end-effector roll: changing `q4` changes the tool orientation about `z4`,
+  but does not move the tool origin for this geometry.
+- This is not a complete kinematic decoupling because joints 1 through 3 still
+  determine the position and direction of the `z4` axis.
 
 ## Topic 3: Forward Kinematics
 
@@ -175,6 +186,8 @@ p_tool = T_0^tool[0:3, 3]
   extraction.
 - FK returns full homogeneous transforms.
 - Point extraction stays inside FK.
+- With `T_4^tool = Trans_z(L_tool)`, FK should keep `p_tool` invariant under
+  changes to `q4` when `q1`, `q2`, and `q3` are fixed.
 
 ## Topic 4: Geometric Jacobian
 
@@ -196,6 +209,9 @@ J_i = [v_i; omega_i]
 - The geometric Jacobian is constructed from the transform chain.
 - All Jacobian quantities are expressed in the base frame.
 - The primary control block is `J_v`.
+- Because `T_4^tool = Trans_z(L_tool)`, the `q4` column of `J_v` is zero for
+  the default geometry: joint 4 contributes roll/orientation, not tool-origin
+  translation.
 - For a sufficiently non-degenerate spatial geometry and away from
   singularities, `J_v` should achieve rank `3`.
 - Singularity analysis should use SVD-derived quantities such as rank, condition
@@ -224,6 +240,8 @@ q_dot_ref = q_dot_cmd
 ### Design Decisions
 
 - `q_dot_cmd` is integrated into `q_ref_next`, and `q_dot_ref = q_dot_cmd`.
+- Position IK acts through `J_v`; with the default `z4` tool alignment, it
+  should not rely on joint 4 to move the tool origin.
 - The damping term `lambda` increases as the smallest singular value decreases.
 - This damping rule prioritizes stability over accuracy near singularities.
 - The magnitude of `v_des` is limited to improve numerical stability and to
@@ -393,10 +411,12 @@ The final implementation is considered complete when:
 
 - the arm geometry is spatial and uses the target DH table with
   `alpha = [pi/2, 0, pi/2, 0]`,
-- `T_4^tool` includes a nonzero translation `L_tool > 0`,
+- `T_4^tool` includes a nonzero translation `L_tool > 0` along `z4`,
 - forward kinematics returns both joint-4 and tool pose consistently and
   exposes FK-derived joint/tool points for plotting without a separate
   interface layer,
+- changing only `q4` changes tool roll/orientation but leaves the tool origin
+  position unchanged,
 - the document and implementation consistently describe a `3D` position task
   with one redundant DOF,
 - only five stable interfaces are defined: `FK`, `Jacobian`, `IK`,
@@ -406,6 +426,8 @@ The final implementation is considered complete when:
   than standalone interfaces,
 - each topic presents one selected approach only,
 - the Jacobian section states the base-frame convention explicitly,
+- the Jacobian section explains that the default `z4` tool alignment makes the
+  `q4` position-Jacobian column zero,
 - `J_v` supports position-first inverse differential kinematics with a
   documented damping rule,
 - the damping rule explicitly defines `sigma_min_value` and
