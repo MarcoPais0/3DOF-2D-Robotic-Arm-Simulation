@@ -39,7 +39,8 @@ manipulator.
 ## How to Run
 
 1. Clone the repository
-    - `git clone https://github.com/MarcoPais0/3DOF-2D-Robotic-Arm-Simulation.git`
+    - `git clone <your-repository-url>`
+    - `cd 3DOF-Manipulator-Simulation`
 2. Install dependencies
     - `pip install -r requirements.txt`
 3. Run the simulation
