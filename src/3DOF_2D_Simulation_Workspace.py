@@ -6,7 +6,7 @@ import numpy as np
 
 
 class WorkspaceAnalyzer:
-    def __init__(self, l1: float = 10, l2: float = 5, l3: float = 3) -> None:
+    def __init__(self, l1: float = 10.0, l2: float = 5.0, l3: float = 3.0) -> None:
         """
         Initialize the workspace analyzer with robot link lengths and figure setup.
         """
@@ -25,12 +25,12 @@ class WorkspaceAnalyzer:
     def workspace_analysis(self) -> None:
         """
         Draw workspace as concentric rings.
-        For each radius, rotate the end-effector 200 times.
+        For each radius, sample 200 angular positions.
         """
         r_max: float = self.L1 + self.L2 + self.L3
-        r_min: float = max(0.0, self.L1 - self.L2 - self.L3)
+        r_min: float = max(0.0, self.L1 - (self.L2 + self.L3))
         radius_steps: int = 100
-        angle_steps: int = 100
+        angle_steps: int = 200
 
         radii: np.ndarray = np.linspace(r_min, r_max, radius_steps)
         for r in radii:
@@ -40,7 +40,6 @@ class WorkspaceAnalyzer:
 
             self.ax.plot(x, y, '.', color='red', markersize=1)
             self.fig.canvas.draw_idle()
-            angle_steps += 1
             plt.pause(0.05)
 
         plt.show()

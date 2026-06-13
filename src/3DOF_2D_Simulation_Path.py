@@ -54,10 +54,8 @@ class PlanarArm3DOF:
             x, y, 'o', color='blue', markersize=5
         )
 
-        self.orientation_arrow = self.ax.arrow(0, 0, 0, 0)
-        self.orientation_arrow = self.draw_arrow(
-            self.theta1, self.theta2, self.theta3
-        )
+        self.orientation_arrow = None
+        self.draw_arrow(self.theta1, self.theta2, self.theta3)
 
     def forward_kinematics(
             self,
@@ -159,6 +157,9 @@ class PlanarArm3DOF:
             for r, t in zip(rs, thetas):
                 points.append((r * np.cos(t), r * np.sin(t)))
 
+        else:
+            raise ValueError(f"Unsupported path pattern: {pattern}")
+
         return points
 
     def proportional_update_arm(
@@ -204,7 +205,9 @@ class PlanarArm3DOF:
         x_values, y_values = self.forward_kinematics(t1, t2, t3)
         phi: float = t1 + t2 + t3
 
-        self.orientation_arrow.remove()
+        if self.orientation_arrow is not None:
+            self.orientation_arrow.remove()
+
         self.orientation_arrow = self.ax.arrow(
             x_values[-1],
             y_values[-1],
@@ -232,11 +235,13 @@ class PlanarArm3DOF:
         for px, py in points:
             self.ax.plot(px, py, 'o', color='red', markersize=4)
 
-        path_idx: List[int] = [0]
+        path_idx: int = 0
         tolerance: float = 0.15
 
         def timer_event(_) -> None:
-            point_x, point_y = points[path_idx[0]]
+            nonlocal path_idx
+
+            point_x, point_y = points[path_idx]
             phi_target: float = np.arctan2(point_y, point_x)
 
             angles = self.inverse_kinematics(
@@ -244,7 +249,7 @@ class PlanarArm3DOF:
             )
 
             if angles is None:
-                path_idx[0] = (path_idx[0] + 1) % len(points)
+                path_idx = (path_idx + 1) % len(points)
                 return
 
             self.proportional_update_arm(angles)
@@ -257,7 +262,7 @@ class PlanarArm3DOF:
                     point_x - x_vals[-1],
                     point_y - y_vals[-1]
             ) < tolerance:
-                path_idx[0] = (path_idx[0] + 1) % len(points)
+                path_idx = (path_idx + 1) % len(points)
 
         timer = self.fig.canvas.new_timer(
             interval=int(self.DT * 1000)
